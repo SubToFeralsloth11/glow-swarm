@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultSave, sanitizeSave, loadSave, writeSave, applyRunResult, SAVE_KEY } from '../src/save.js';
+import { defaultSave, sanitizeSave, sanitizeRun, loadSave, writeSave, applyRunResult, SAVE_KEY } from '../src/save.js';
+import { ENEMY_HARD_CAP, PICKUP_CAP } from '../src/data.js';
 
 function memoryStorage(initial = {}) {
   const data = { ...initial };

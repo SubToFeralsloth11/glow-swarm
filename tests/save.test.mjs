@@ -84,6 +84,17 @@ test('oversized saved swarms and loot are trimmed to the in-game caps', () => {
   assert.equal(run.pickups.length, PICKUP_CAP);
 });
 
+test('malformed entries do not use up the cap', () => {
+  const run = sanitizeRun({
+    stage: 0,
+    weapons: { blaster: 1 },
+    enemies: [...Array.from({ length: ENEMY_HARD_CAP }, () => ['nope', 0, 0, 1, 0]), ['drone', 7, 8, 1, 0]],
+    pickups: [...Array.from({ length: PICKUP_CAP }, () => ['xp', NaN, 0, 1]), ['coin', 1, 2, 1]],
+  });
+  assert.deepEqual(run.enemies, [['drone', 7, 8, 1, 0]]);
+  assert.deepEqual(run.pickups, [['coin', 1, 2, 1]]);
+});
+
 test('winning a stage unlocks the next one, pays a bonus and clears the run', () => {
   const s = defaultSave();
   s.run = { stage: 0 };

@@ -577,16 +577,18 @@ export class Game {
   }
 
   addPickup(kind, x, y, value) {
-    // Hard cap on floor pickups. When full: XP merges into an existing gem
-    // (or is granted directly), coins are banked, hearts/vacuums are skipped.
-    // Chests still drop; they come from elites (one a minute), so stay bounded.
-    if (this.pickups.length >= PICKUP_CAP && kind !== 'chest') {
-      if (kind === 'coin') this.coins += value;
-      else if (kind === 'xp') {
-        const g = this.pickups.find((k) => k.kind === 'xp');
-        if (g) g.value += value;
-        else this.xp += value * (1 + this.meta.xp);
+    // Hard cap on floor pickups. When the field is full, XP merges into a
+    // random existing gem; everything else (or XP with no gem to join) is
+    // collected on the spot so nothing is lost.
+    if (this.pickups.length >= PICKUP_CAP) {
+      if (kind === 'xp') {
+        const start = Math.floor(this.rng() * this.pickups.length);
+        for (let i = 0; i < this.pickups.length; i++) {
+          const g = this.pickups[(start + i) % this.pickups.length];
+          if (g.kind === 'xp') { g.value += value; return; }
+        }
       }
+      this.collect({ kind, value });
       return;
     }
     this.pickups.push({ kind, x, y, value, pulled: false, vx: 0, vy: 0, age: 0 });

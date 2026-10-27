@@ -173,6 +173,29 @@ test('elite drops a chest that grants a free level-up', () => {
   assert.equal(g.pendingLevelUps, before + 1);
 });
 
+test('a full pickup field never grows; overflow loot still pays out', () => {
+  const { g } = newGame();
+  for (let i = 0; i < 1000; i++) g.addPickup('coin', 5000 + i, 5000, 1);
+  const cap = g.pickups.length;
+  assert.ok(cap < 1000, 'field is capped');
+  const banked = 1000 - cap;
+  assert.equal(g.coins, banked, 'overflow coins are banked');
+  g.player.hp = 10;
+  g.addPickup('heart', 0, 0, 1);
+  assert.equal(g.player.hp, 40, 'overflow heart heals immediately');
+  const pending = g.pendingLevelUps;
+  g.addPickup('chest', 0, 0, 1);
+  assert.equal(g.pendingLevelUps, pending + 1, 'overflow chest grants its upgrade');
+  const xpBefore = g.xp;
+  g.addPickup('xp', 0, 0, 3);
+  assert.ok(g.xp > xpBefore, 'XP with no gem to merge into is granted');
+  assert.equal(g.pickups.length, cap);
+});
+
+test('each level costs more XP than the last', () => {
+  for (let l = 1; l < 100; l++) assert.ok(xpForLevel(l + 1) > xpForLevel(l), `level ${l}`);
+});
+
 test('meta upgrades make the ship stronger', () => {
   const save = defaultSave();
   Object.assign(save.meta, { hp: 5, power: 5, speed: 5, magnet: 5 });

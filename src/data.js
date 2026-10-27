@@ -14,7 +14,7 @@ export const STAGES = [
 // XP is green, coins gold, the player and its shots cyan/white.
 export const ENEMIES = {
   drone: { hp: 8, speed: 72, r: 12, dmg: 8, xp: 1, color: '#ff3b5c', coin: 0.14 },
-  dart: { hp: 7, speed: 135, r: 9, dmg: 6, xp: 1, color: '#ff8a1f', coin: 0.14 },
+  dart: { hp: 7, speed: 135, r: 9, dmg: 6, xp: 1, color: '#ffb020', coin: 0.14 },
   spitter: { hp: 22, speed: 50, r: 13, dmg: 8, xp: 3, color: '#ff4fd8', coin: 0.3, fireEvery: 2.6 },
   brute: { hp: 70, speed: 44, r: 22, dmg: 16, xp: 6, color: '#a855f7', coin: 0.6 },
   splitter: { hp: 34, speed: 60, r: 16, dmg: 10, xp: 3, color: '#ff6a3d', coin: 0.3, splits: 2 },

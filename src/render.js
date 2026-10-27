@@ -545,6 +545,7 @@ function spawnScale(e) {
   return a < 1 ? 1 - Math.pow(1 - a, 3) + Math.sin(a * Math.PI) * 0.15 : 1;
 }
 const GLOW_BUDGET = 110; // above this many visible enemies, only elites/bosses glow
+const XP_GLOW_BUDGET = 150; // above this many visible pickups, gems skip their glow
 const ELITE_DASH = [7, 6];
 const NO_DASH = [];
 const FONT_SMALL = '900 14px system-ui, sans-serif';
@@ -556,7 +557,7 @@ export function render(ctx, game, W, H, dpr, now, dt) {
   buildBackground(W, H, game.stage.hue);
   // Shake and hurt tint only animate while the run is live; behind pause and
   // level-up overlays (dt === 0 or not playing) the frame stays still.
-  const live = game.state === 'play' && dt > 0;
+  const live = game.state === 'play' && dt > 0 && !(game.endTimer > 0);
 
   // smoothed camera that leads slightly in the direction of travel
   const tx = p.x + p.vx * 0.22, ty = p.y + p.vy * 0.22;
@@ -619,10 +620,11 @@ export function render(ctx, game, W, H, dpr, now, dt) {
 
   // ---- pickups ----
   ctx.globalCompositeOperation = 'lighter';
+  const xpCrowded = visPickups.length > XP_GLOW_BUDGET;
   for (const k of visPickups) {
     if (k.kind === 'xp') {
       const gm = GEM[gemTier(k.value)];
-      glowAt(ctx, gm.color, k.x, k.y, gm.size * 3.2, 0.7);
+      if (!xpCrowded) glowAt(ctx, gm.color, k.x, k.y, gm.size * 3.2, 0.7);
     } else if (k.kind === 'chest') {
       ctx.globalAlpha = 0.6 + 0.2 * Math.sin(now * 0.005);
       blit(ctx, beamSprite(), k.x, k.y - 64, 0, 1);

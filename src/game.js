@@ -236,6 +236,8 @@ export class Game {
     if (this.endTimer > 0) {
       // Short slow-motion beat after the boss dies before the victory screen.
       this.endTimer -= dt;
+      this.shake = Math.max(0, this.shake - dt * 30);
+      this.hurtFlash = Math.max(0, this.hurtFlash - dt);
       this.updateFx(dt * 0.3);
       if (this.endTimer <= 0) {
         this.state = 'won';
@@ -564,7 +566,7 @@ export class Game {
     e.kx += kx * kb;
     e.ky += ky * kb;
     if (this.settings.damageNumbers) {
-      const jitter = (this.rng() - 0.5) * 10;
+      const jitter = (Math.random() - 0.5) * 10; // cosmetic: keep the seeded gameplay RNG untouched
       // Rapid hits on one enemy add up in a single number instead of stacking a pile of them.
       const t = e.dmgText;
       if (t && t.life > 0.2 && this.texts.includes(t)) {

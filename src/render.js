@@ -546,6 +546,7 @@ function spawnScale(e) {
 }
 const GLOW_BUDGET = 110; // above this many visible enemies, only elites/bosses glow
 const XP_GLOW_BUDGET = 100; // gem glows start shrinking past this many visible gems (minimum at 2.2x)
+const BULLET_MARGIN = 24; // enemy bullet glow is 3r with r up to 7
 const ELITE_DASH = [7, 6];
 const NO_DASH = [];
 const FONT_SMALL = '900 14px system-ui, sans-serif';
@@ -607,7 +608,8 @@ export function render(ctx, game, W, H, dpr, now, dt) {
   ctx.stroke();
 
   visEnemies.length = 0;
-  for (const e of game.enemies) if (!e.dead && inView(e.x, e.y, e.r * 2)) visEnemies.push(e);
+  // margin covers the widest enemy glow (2.6r on elites/bosses) plus its ground shadow
+  for (const e of game.enemies) if (!e.dead && inView(e.x, e.y, e.r * 2.8)) visEnemies.push(e);
   visPickups.length = 0;
   let gems = 0;
   for (const k of game.pickups) {
@@ -782,7 +784,7 @@ export function render(ctx, game, W, H, dpr, now, dt) {
 
   // ---- enemy bullets: drawn on top of everything so danger is always visible ----
   ctx.globalCompositeOperation = 'lighter';
-  for (const b of game.ebullets) if (inView(b.x, b.y, 16)) glowAt(ctx, '#ff2d55', b.x, b.y, b.r * 3, 0.7);
+  for (const b of game.ebullets) if (inView(b.x, b.y, BULLET_MARGIN)) glowAt(ctx, '#ff2d55', b.x, b.y, b.r * 3, 0.7);
   ctx.globalCompositeOperation = 'source-over';
   const pulse = 0.5 + 0.5 * Math.sin(now * 0.015);
   world(ctx);
@@ -791,14 +793,14 @@ export function render(ctx, game, W, H, dpr, now, dt) {
   ctx.globalAlpha = 0.35 + 0.45 * pulse;
   ctx.beginPath();
   for (const b of game.ebullets) {
-    if (!inView(b.x, b.y, 16)) continue;
+    if (!inView(b.x, b.y, BULLET_MARGIN)) continue;
     const rr = b.r * (1.6 + pulse * 0.35);
     ctx.moveTo(b.x + rr, b.y);
     ctx.arc(b.x, b.y, rr, 0, TAU);
   }
   ctx.stroke();
   ctx.globalAlpha = 1;
-  for (const b of game.ebullets) if (inView(b.x, b.y, 16)) blit(ctx, orbSprite(b.r), b.x, b.y);
+  for (const b of game.ebullets) if (inView(b.x, b.y, BULLET_MARGIN)) blit(ctx, orbSprite(b.r), b.x, b.y);
 
   // ---- particles & lightning ----
   ctx.globalCompositeOperation = 'lighter';

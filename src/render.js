@@ -498,7 +498,7 @@ function buildNebula(hue) {
   const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
   for (let i = 0; i < 18; i++) {
     const x = rnd() * NEBULA, y = rnd() * NEBULA, r = 60 + rnd() * 170;
-    const h = hue + (rnd() - 0.5) * 90;
+    const h = hue + (rnd() - 0.5) * 60; // stay near the stage's cool hue, away from enemy reds
     const a = 0.05 + rnd() * 0.09;
     // draw wrapped copies so the tile repeats seamlessly
     for (const ox of [-NEBULA, 0, NEBULA]) {

@@ -1,6 +1,6 @@
 // Persistent save data in localStorage. All reads are validated so a corrupt
 // or older save never crashes the game; unknown fields are dropped.
-import { META, STAGES, WEAPONS, PASSIVES } from './data.js';
+import { META, STAGES, WEAPONS, PASSIVES, ENEMIES } from './data.js';
 
 export const SAVE_KEY = 'glowswarm.save.v1';
 
@@ -60,7 +60,21 @@ export function sanitizeRun(run) {
     nextSwarm: num(run.nextSwarm, 0, 3600, 45),
     pendingLevelUps: int(run.pendingLevelUps, 0, 99, 0),
     bossHp: Number.isFinite(run.bossHp) ? Math.max(0.01, Math.min(1, run.bossHp)) : null,
+    bossDefeated: bool(run.bossDefeated, false),
+    enemies: sanitizeEnemies(run.enemies),
   };
+}
+
+// Saved swarm entries: [type, dx, dy, hpFraction, elite]. Bosses are restored separately.
+function sanitizeEnemies(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const e of list.slice(0, 320)) {
+    if (!Array.isArray(e) || !ENEMIES[e[0]] || ENEMIES[e[0]].boss) continue;
+    if (![e[1], e[2], e[3]].every(Number.isFinite)) continue;
+    out.push([e[0], num(e[1], -3000, 3000, 0), num(e[2], -3000, 3000, 0), num(e[3], 0.01, 1, 1), e[4] ? 1 : 0]);
+  }
+  return out;
 }
 
 export function sanitizeSave(raw) {

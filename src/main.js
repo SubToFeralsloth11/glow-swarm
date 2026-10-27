@@ -616,6 +616,7 @@ function frame(now) {
     demo.input = { x: Math.cos(t * 0.4), y: Math.sin(t * 0.55) };
     demo.pendingLevelUps = 0;
     demo.xp = 0;
+    demo.time = 40; // keep the attract-mode swarm at a fixed, light difficulty
     demo.update(dt);
     render(ctx, demo, W, H, now);
   }

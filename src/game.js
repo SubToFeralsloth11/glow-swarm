@@ -13,7 +13,9 @@ export function mulberry32(seed) {
   };
 }
 
-const ENEMY_CAP = 240;
+const ENEMY_CAP = 240; // regular spawns stop here
+const ENEMY_HARD_CAP = 320; // scripted spawns (swarms, splits, minions) stop here; only the boss ignores it
+const ELITE = { elite: true, hpMul: 6, scale: 1.45 };
 const PICKUP_CAP = 350;
 const PARTICLE_CAP = 450;
 const TEXT_CAP = 40;
@@ -119,10 +121,16 @@ export class Game {
       rerolls: this.rerolls,
       nextElite: this.nextElite,
       nextSwarm: this.nextSwarm,
-      // An open level-up menu counts as pending so it reappears on resume.
-      pendingLevelUps: this.pendingLevelUps + (this.state === 'levelup' ? 1 : 0),
+      // choose() is what decrements, so this already includes an open level-up menu.
+      pendingLevelUps: this.pendingLevelUps,
       // Fraction of Warden HP left, so a reload mid-fight doesn't heal the boss.
       bossHp: this.boss && !this.boss.dead ? this.boss.hp / this.boss.maxHp : null,
+      // Saved during the victory beat: resuming finishes the win instead of respawning the boss.
+      bossDefeated: this.bosses > 0,
+      // The swarm itself, relative to the ship, so reloading is not an escape hatch.
+      enemies: this.enemies
+        .filter((e) => !e.dead && !e.def.boss)
+        .map((e) => [e.type, Math.round(e.x - this.player.x), Math.round(e.y - this.player.y), Math.round((e.hp / e.maxHp) * 1000) / 1000, e.elite ? 1 : 0]),
     };
   }
 
@@ -137,8 +145,18 @@ export class Game {
     this.player.hp = s.hp;
     this.recalc();
     this.player.hp = Math.max(1, Math.min(s.hp, this.player.maxHp));
-    this.player.invuln = 2; // grace period after resuming
+    this.player.invuln = 1.5; // short grace period to get your bearings after resuming
     this.restoredBossHp = s.bossHp; // applied when the Warden respawns on the first update
+    this.bossWarned = s.time >= this.stage.duration - 10;
+    if (s.bossDefeated) {
+      this.bosses = 1;
+      this.bossSpawned = true;
+      this.endTimer = 0.5;
+    }
+    for (const [type, x, y, frac, elite] of s.enemies || []) {
+      const e = this.spawnEnemy(type, x, y, elite ? { ...ELITE, force: true } : { force: true });
+      if (e) e.hp = e.maxHp * frac;
+    }
   }
 
   result() {
@@ -298,7 +316,8 @@ export class Game {
   }
 
   spawnEnemy(type, x, y, opts = {}) {
-    if (this.enemies.length >= ENEMY_CAP && !opts.force) return null;
+    const cap = type === 'boss' ? Infinity : opts.force ? ENEMY_HARD_CAP : ENEMY_CAP;
+    if (this.enemies.length >= cap) return null;
     const def = ENEMIES[type];
     const t = this.time;
     const hpMul = def.boss ? this.stage.diff * (1 + this.time / 600) : this.hpScale();
@@ -346,8 +365,9 @@ export class Game {
     }
     if (t >= this.nextElite) {
       this.nextElite += 60;
-      this.spawnEnemy('brute', undefined, undefined, { elite: true, hpMul: 6, scale: 1.45, force: true });
-      this.hooks.toast('An elite approaches — it carries treasure!');
+      if (this.spawnEnemy('brute', undefined, undefined, { ...ELITE, force: true })) {
+        this.hooks.toast('An elite approaches — it carries treasure!');
+      }
     }
     if (t >= this.nextSwarm && !this.bossSpawned) {
       this.nextSwarm += 45;

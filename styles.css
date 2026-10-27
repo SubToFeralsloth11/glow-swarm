@@ -196,7 +196,7 @@ button.card:active { transform: scale(0.97); }
 .pill.boss { color: var(--pink); border-color: var(--pink); animation: blink 0.8s infinite; }
 @keyframes blink { 50% { opacity: 0.5; } }
 #hud-loadout { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
-#hud-loadout span { font-size: 12px; background: rgba(0, 0, 0, 0.45); border-radius: 7px; padding: 2px 6px; color: var(--muted); }
+#hud-loadout span { font-size: 13px; background: rgba(0, 0, 0, 0.45); border-radius: 7px; padding: 2px 7px; color: var(--muted); }
 #hud-loadout span b { color: var(--text); }
 #boss-bar { margin: 10px auto 0; width: min(360px, 92%); text-align: center; }
 #boss-bar span { font-size: 12px; font-weight: 900; letter-spacing: 3px; color: var(--pink); text-shadow: 0 0 8px var(--pink); }

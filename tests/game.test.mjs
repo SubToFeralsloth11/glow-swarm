@@ -86,7 +86,7 @@ test('snapshot -> sanitize -> restore resumes the same run', () => {
   assert.ok(Math.abs(g2.player.hp - Math.max(1, g.player.hp)) < 1e-9);
 });
 
-test('an open level-up menu survives a save/resume', () => {
+test('an open level-up menu survives a save/resume exactly once', () => {
   const { g } = newGame();
   g.xp = xpForLevel(1);
   g.update(1 / 60);
@@ -96,6 +96,50 @@ test('an open level-up menu survives a save/resume', () => {
   g2.update(1 / 60);
   assert.equal(g2.state, 'levelup');
   assert.equal(events.levelUps, 1);
+  g2.choose(0);
+  assert.equal(g2.pendingLevelUps, 0, 'reloading must not mint extra upgrades');
+  g2.update(1 / 60);
+  assert.equal(g2.state, 'play');
+});
+
+test('resuming restores the swarm around the ship', () => {
+  const { g } = newGame();
+  run(g, 45);
+  const alive = g.enemies.filter((e) => !e.dead);
+  assert.ok(alive.length > 5);
+  const { g: g2 } = newGame({ snapshot: sanitizeRun(JSON.parse(JSON.stringify(g.snapshot()))) });
+  assert.equal(g2.enemies.length, alive.length);
+  const near = (a, b) => Math.abs(a - b) <= 1;
+  alive.forEach((e, i) => {
+    const r = g2.enemies[i];
+    assert.equal(r.type, e.type);
+    assert.ok(near(r.x, e.x - g.player.x) && near(r.y, e.y - g.player.y));
+    assert.ok(Math.abs(r.hp / r.maxHp - e.hp / e.maxHp) < 0.002);
+  });
+});
+
+test('saving during the victory beat resumes into the win, not a fresh boss', () => {
+  const { g } = newGame();
+  g.time = g.stage.duration;
+  g.nextElite = g.nextSwarm = 1e9;
+  g.update(1 / 60);
+  g.damage(g.boss, 1e9, 0, 0);
+  g.update(1 / 60);
+  assert.equal(g.state, 'play', 'still in the victory beat');
+  const { g: g2, events } = newGame({ snapshot: sanitizeRun(JSON.parse(JSON.stringify(g.snapshot()))) });
+  for (let i = 0; i < 120 && !events.end; i++) g2.update(1 / 60);
+  assert.equal(events.boss, 0, 'no Warden respawn');
+  assert.equal(events.end?.won, true);
+  assert.equal(events.end.bosses, 1);
+});
+
+test('scripted spawns cannot grow the swarm without bound', () => {
+  const { g } = newGame();
+  for (let i = 0; i < 1000; i++) g.spawnEnemy('dart', i, 0, { force: true });
+  const n = g.enemies.length;
+  assert.ok(n < 1000);
+  assert.ok(g.spawnEnemy('boss', 0, 0, { force: true }), 'the Warden always spawns');
+  assert.equal(g.enemies.length, n + 1);
 });
 
 test('dying ends the run once; a revive saves you first', () => {

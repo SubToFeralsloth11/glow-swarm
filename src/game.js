@@ -59,6 +59,7 @@ export class Game {
     this.nextElite = 60;
     this.nextSwarm = 30;
     this.bossSpawned = false;
+    this.bossWarned = false;
     this.boss = null;
     this.pendingLevelUps = 0;
     this.choices = null;
@@ -358,6 +359,11 @@ export class Game {
         this.spawnEnemy(type, this.player.x + Math.cos(a) * d, this.player.y + Math.sin(a) * d, { force: true });
       }
       this.hooks.toast('Swarm incoming!');
+      this.hooks.sfx('warn');
+    }
+    if (t >= this.stage.duration - 10 && !this.bossWarned) {
+      this.bossWarned = true;
+      this.hooks.toast('⚠ The Warden arrives in 10 seconds — get ready!');
       this.hooks.sfx('warn');
     }
     if (t >= this.stage.duration && !this.bossSpawned) {

@@ -1,6 +1,6 @@
 // Persistent save data in localStorage. All reads are validated so a corrupt
 // or older save never crashes the game; unknown fields are dropped.
-import { META, STAGES, WEAPONS, PASSIVES, ENEMIES } from './data.js';
+import { META, STAGES, WEAPONS, PASSIVES, ENEMIES, ENEMY_HARD_CAP, PICKUP_CAP } from './data.js';
 
 export const SAVE_KEY = 'glowswarm.save.v1';
 
@@ -74,7 +74,7 @@ export function sanitizeRun(run) {
 function sanitizeEnemies(list) {
   if (!Array.isArray(list)) return [];
   const out = [];
-  for (const e of list.slice(0, 320)) {
+  for (const e of list.slice(0, ENEMY_HARD_CAP)) {
     if (!Array.isArray(e) || !has(ENEMIES, e[0]) || ENEMIES[e[0]].boss) continue;
     if (![e[1], e[2], e[3]].every(Number.isFinite)) continue;
     out.push([e[0], num(e[1], -3000, 3000, 0), num(e[2], -3000, 3000, 0), num(e[3], 0.01, 1, 1), e[4] ? 1 : 0]);
@@ -86,10 +86,11 @@ function sanitizeEnemies(list) {
 function sanitizePickups(list) {
   if (!Array.isArray(list)) return [];
   const out = [];
-  for (const k of list.slice(0, 350)) {
+  for (const k of list.slice(0, PICKUP_CAP)) {
     if (!Array.isArray(k) || !PICKUP_KINDS.has(k[0])) continue;
     if (![k[1], k[2], k[3]].every(Number.isFinite)) continue;
-    out.push([k[0], num(k[1], -3000, 3000, 0), num(k[2], -3000, 3000, 0), num(k[3], 1, 1e6, 1)]);
+    // Merged XP gems can grow large; the ceiling only rejects absurd hand-edited values.
+    out.push([k[0], num(k[1], -3000, 3000, 0), num(k[2], -3000, 3000, 0), num(k[3], 1, 1e9, 1)]);
   }
   return out;
 }

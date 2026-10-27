@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Game, mulberry32, ENEMY_HARD_CAP } from '../src/game.js';
+import { Game, mulberry32 } from '../src/game.js';
 import { defaultSave, sanitizeRun } from '../src/save.js';
-import { WEAPONS, PASSIVES, xpForLevel } from '../src/data.js';
+import { WEAPONS, PASSIVES, xpForLevel, ENEMY_HARD_CAP } from '../src/data.js';
 import { botInput, simulate } from './sim.mjs';
 
 function newGame(opts = {}) {

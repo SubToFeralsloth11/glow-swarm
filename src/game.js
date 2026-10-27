@@ -1,6 +1,6 @@
 // Run simulation. No DOM access: rendering lives in render.js so this file
 // runs headless under Node for tests.
-import { STAGES, ENEMIES, SPAWN_TABLE, WEAPONS, PASSIVES, PLAYER_BASE, xpForLevel } from './data.js';
+import { STAGES, ENEMIES, SPAWN_TABLE, WEAPONS, PASSIVES, PLAYER_BASE, xpForLevel, ENEMY_CAP, ENEMY_HARD_CAP, PICKUP_CAP } from './data.js';
 
 export function mulberry32(seed) {
   let a = seed >>> 0;
@@ -13,10 +13,7 @@ export function mulberry32(seed) {
   };
 }
 
-const ENEMY_CAP = 240; // regular spawns stop here
-export const ENEMY_HARD_CAP = 320; // scripted spawns (swarms, splits, minions) stop here; only the boss ignores it
 const ELITE = { elite: true, hpMul: 6, scale: 1.45 };
-const PICKUP_CAP = 350;
 const PARTICLE_CAP = 450;
 const TEXT_CAP = 40;
 const CELL = 64;

@@ -119,3 +119,8 @@ export function xpForLevel(level) {
 }
 
 export const PLAYER_BASE = { hp: 100, speed: 155, magnet: 100, r: 13, invuln: 0.6 };
+
+// Entity limits, shared by the simulation and the save sanitizer.
+export const ENEMY_CAP = 240; // regular spawns stop here
+export const ENEMY_HARD_CAP = 320; // scripted spawns (swarms, splits, minions) stop here; only the boss ignores it
+export const PICKUP_CAP = 350;

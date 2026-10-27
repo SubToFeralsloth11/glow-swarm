@@ -119,7 +119,7 @@ export function render(ctx, game, W, H, now) {
   for (const e of game.enemies) {
     if (e.dead || !inView(e.x, e.y, e.r * 2)) continue;
     const c = e.flash > 0 ? '#ffffff' : e.def.color;
-    const gs = e.r * (e.elite || e.def.boss ? 4.5 : 3.2);
+    const gs = e.r * (e.elite || e.def.boss ? 4 : 2.6);
     ctx.drawImage(glow(e.def.color), e.x - gs / 2, e.y - gs / 2, gs, gs);
     drawEnemy(ctx, e, c, p);
   }

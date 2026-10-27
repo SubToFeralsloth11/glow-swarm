@@ -624,6 +624,8 @@ function frame(now) {
 show('title');
 requestAnimationFrame(frame);
 
-if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+// Local dev servers skip the worker so edits show up on reload; append ?sw to test offline locally.
+const devHost = ['localhost', '127.0.0.1'].includes(location.hostname) && !location.search.includes('sw');
+if ('serviceWorker' in navigator && location.protocol !== 'file:' && !devHost) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }

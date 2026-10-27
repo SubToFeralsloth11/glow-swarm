@@ -86,7 +86,7 @@ export const WEAPONS = {
 
 export const PASSIVES = {
   might: { name: 'Might', icon: '⚔', desc: '+12% damage', max: 5 },
-  haste: { name: 'Haste', icon: '⏩', desc: '-8% weapon cooldowns', max: 5 },
+  haste: { name: 'Haste', icon: '»', desc: '-8% weapon cooldowns', max: 5 },
   swift: { name: 'Swift', icon: '➶', desc: '+8% move speed', max: 5 },
   magnet: { name: 'Magnet', icon: '◉', desc: '+30% pickup range', max: 5 },
   vitality: { name: 'Vitality', icon: '♥', desc: '+20 max HP and heal 20', max: 5 },

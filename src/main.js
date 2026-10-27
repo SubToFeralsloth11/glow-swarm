@@ -32,7 +32,16 @@ function resize() {
   const s = viewScale(W, H);
   for (const g of [game, demo]) if (g) { g.viewW = W / s; g.viewH = H / s; }
 }
-window.addEventListener('resize', resize);
+// iOS fires resize on every URL-bar show/hide; coalesce bursts into one resize per frame.
+let resizeQueued = false;
+window.addEventListener('resize', () => {
+  if (resizeQueued) return;
+  resizeQueued = true;
+  requestAnimationFrame(() => {
+    resizeQueued = false;
+    resize();
+  });
+});
 resize();
 
 // ---------- screens ----------

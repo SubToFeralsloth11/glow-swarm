@@ -15,7 +15,7 @@ export const ENEMIES = {
   dart: { hp: 7, speed: 135, r: 9, dmg: 6, xp: 1, color: '#ff8a1f', coin: 0.14 },
   spitter: { hp: 22, speed: 50, r: 13, dmg: 8, xp: 3, color: '#ff4fd8', coin: 0.3, fireEvery: 2.6 },
   brute: { hp: 70, speed: 44, r: 22, dmg: 16, xp: 6, color: '#a855f7', coin: 0.6 },
-  splitter: { hp: 34, speed: 60, r: 16, dmg: 10, xp: 3, color: '#7b6cff', coin: 0.3, splits: 2 },
+  splitter: { hp: 34, speed: 60, r: 16, dmg: 10, xp: 3, color: '#ff6a3d', coin: 0.3, splits: 2 },
   boss: { hp: 1800, speed: 58, r: 46, dmg: 26, xp: 60, color: '#ff1f4b', coin: 1, boss: true, fireEvery: 3.2 },
 };
 

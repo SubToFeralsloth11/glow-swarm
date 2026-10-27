@@ -28,7 +28,7 @@ node tests/sim.mjs 0 2 5   # balance probe: stage, meta level, runs
 |---|---|
 | `src/data.js` | All tunable content: stages, enemies, weapons, passives, meta shop, XP curve |
 | `src/game.js` | Headless run simulation (no DOM), so it can be tested in Node |
-| `src/render.js` | Canvas renderer. The glow comes from cached additive sprites, not `shadowBlur`. |
+| `src/render.js` | Canvas renderer. Every shape is drawn once into a cached, supersampled sprite, and frames allocate nothing. Fixed colour language: enemies are warm and hostile, XP is green crystals, coins are gold, and player shots are cyan/white. Enemy bullets are red-hot orbs drawn on top of everything. |
 | `src/main.js` | Screens, input, game loop, save wiring |
 | `src/save.js` | Validated `localStorage` persistence and run-result accounting |
 | `src/audio.js` | WebAudio synth sound effects and generative music |

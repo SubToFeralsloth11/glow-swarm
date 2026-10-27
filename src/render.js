@@ -55,15 +55,23 @@ function sprite(key, half, draw) {
   return c;
 }
 
-const glow = (color) =>
-  sprite(`glow:${color}`, 32, (g) => {
-    const gr = g.createRadialGradient(0, 0, 0, 0, 0, 32);
-    gr.addColorStop(0, rgba(color, 0.9));
-    gr.addColorStop(0.3, rgba(color, 0.35));
-    gr.addColorStop(1, rgba(color, 0));
-    g.fillStyle = gr;
-    g.fillRect(-32, -32, 64, 64);
-  });
+// Looked up by colour directly (no per-call key string) since it runs hundreds of times a frame.
+const glowCache = new Map();
+function glow(color) {
+  let c = glowCache.get(color);
+  if (!c) {
+    c = sprite(`glow:${color}`, 32, (g) => {
+      const gr = g.createRadialGradient(0, 0, 0, 0, 0, 32);
+      gr.addColorStop(0, rgba(color, 0.9));
+      gr.addColorStop(0.3, rgba(color, 0.35));
+      gr.addColorStop(1, rgba(color, 0));
+      g.fillStyle = gr;
+      g.fillRect(-32, -32, 64, 64);
+    });
+    glowCache.set(color, c);
+  }
+  return c;
+}
 
 const shadowSprite = () =>
   sprite('shadow', 20, (g) => {
@@ -229,9 +237,9 @@ function enemySprite(type, r, color, flash) {
 
 // ---------- pickup sprites ----------
 const GEM = [
-  { size: 5, color: '#4ade80' },
-  { size: 6.5, color: '#2ef2b0' },
-  { size: 8.5, color: '#c3ff3d' },
+  { size: 7, color: '#5cf08a' },
+  { size: 8.5, color: '#19d98b' },
+  { size: 10.5, color: '#c3ff3d' },
 ];
 const gemTier = (v) => (v >= 20 ? 2 : v >= 5 ? 1 : 0);
 
@@ -244,7 +252,7 @@ function gemSprite(tier) {
     g.lineWidth = 2.6;
     g.strokeStyle = OUTLINE;
     g.stroke(outline);
-    g.fillStyle = shade(color, -0.25);
+    g.fillStyle = color;
     g.fill(outline);
     // lit facets
     g.fillStyle = shade(color, 0.45);
@@ -339,7 +347,7 @@ const beamSprite = () =>
 
 // ---------- projectile & player sprites ----------
 const boltSprite = () =>
-  sprite('bolt', 12, (g) => {
+  sprite('bolt', 13, (g) => {
     g.lineWidth = 6;
     g.strokeStyle = 'rgba(40,200,255,0.55)';
     g.beginPath(); g.moveTo(-10, 0); g.lineTo(7, 0); g.stroke();
@@ -393,7 +401,7 @@ const bladeSprite = () =>
     g.stroke(p);
     g.fillStyle = '#e8fff9';
     g.fill(p);
-    g.fillStyle = '#62f5d3';
+    g.fillStyle = '#38d6ff';
     g.beginPath(); g.arc(0, 0, 3, 0, TAU); g.fill();
   });
 
@@ -431,63 +439,77 @@ const shipSprite = () =>
   });
 
 // ---------- background ----------
-let bgKey = '';
+let bgW = 0, bgH = 0, bgHue = -1;
 let bgGrad = null;
 let nebula = null;
 let nebulaHue = -1;
-let vignette = null;
+let starColor = '#fff';
+let gridColor = 'transparent';
 let hurtVignette = null;
 const NEBULA = 640;
 
-function buildBackground(W, H, hue, dpr) {
-  const key = `${W}x${H}:${hue}:${dpr}`;
-  if (key === bgKey) return;
-  bgKey = key;
-  bgGrad = makeCanvas(W * dpr, H * dpr);
-  let g = bgGrad.getContext('2d');
-  let gr = g.createRadialGradient(bgGrad.width / 2, bgGrad.height * 0.45, 0, bgGrad.width / 2, bgGrad.height / 2, Math.max(bgGrad.width, bgGrad.height) * 0.75);
+// Backdrop gradients are smooth, so they are built at quarter resolution and
+// upscaled by drawImage: a few hundred KB instead of tens of MB on big screens.
+const BG_RES = 0.25;
+function buildBackground(W, H, hue) {
+  if (W === bgW && H === bgH && hue === bgHue) return;
+  bgW = W;
+  bgH = H;
+  bgHue = hue;
+  hurtVignette = null; // rebuilt lazily at the new size
+  bgGrad = makeCanvas(W * BG_RES, H * BG_RES);
+  const g = bgGrad.getContext('2d');
+  const w = bgGrad.width, h = bgGrad.height;
+  let gr = g.createRadialGradient(w / 2, h * 0.45, 0, w / 2, h / 2, Math.max(w, h) * 0.75);
   gr.addColorStop(0, `hsl(${hue} 45% 10%)`);
   gr.addColorStop(1, `hsl(${hue} 55% 3%)`);
   g.fillStyle = gr;
-  g.fillRect(0, 0, bgGrad.width, bgGrad.height);
-
-  vignette = makeCanvas(W * dpr, H * dpr);
-  g = vignette.getContext('2d');
-  gr = g.createRadialGradient(vignette.width / 2, vignette.height / 2, Math.min(vignette.width, vignette.height) * 0.35, vignette.width / 2, vignette.height / 2, Math.max(vignette.width, vignette.height) * 0.72);
+  g.fillRect(0, 0, w, h);
+  // edge vignette baked into the backdrop (saves a full-screen composite per frame)
+  gr = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.72);
   gr.addColorStop(0, 'rgba(0,0,0,0)');
-  gr.addColorStop(1, 'rgba(0,0,0,0.55)');
+  gr.addColorStop(1, 'rgba(0,0,0,0.6)');
   g.fillStyle = gr;
-  g.fillRect(0, 0, vignette.width, vignette.height);
+  g.fillRect(0, 0, w, h);
+  starColor = `hsl(${hue} 60% 90%)`;
+  gridColor = `hsla(${hue} 90% 65% / 0.06)`;
+  if (hue !== nebulaHue) buildNebula(hue);
+}
 
-  hurtVignette = makeCanvas(W * dpr, H * dpr);
-  g = hurtVignette.getContext('2d');
-  gr = g.createRadialGradient(hurtVignette.width / 2, hurtVignette.height / 2, Math.min(hurtVignette.width, hurtVignette.height) * 0.3, hurtVignette.width / 2, hurtVignette.height / 2, Math.max(hurtVignette.width, hurtVignette.height) * 0.7);
-  gr.addColorStop(0, 'rgba(255,0,60,0)');
-  gr.addColorStop(1, 'rgba(255,0,60,1)');
-  g.fillStyle = gr;
-  g.fillRect(0, 0, hurtVignette.width, hurtVignette.height);
+function getHurtVignette(W, H) {
+  if (!hurtVignette) {
+    hurtVignette = makeCanvas(W * BG_RES, H * BG_RES);
+    const g = hurtVignette.getContext('2d');
+    const w = hurtVignette.width, h = hurtVignette.height;
+    const gr = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.3, w / 2, h / 2, Math.max(w, h) * 0.7);
+    gr.addColorStop(0, 'rgba(255,0,60,0)');
+    gr.addColorStop(1, 'rgba(255,0,60,1)');
+    g.fillStyle = gr;
+    g.fillRect(0, 0, w, h);
+  }
+  return hurtVignette;
+}
 
-  if (hue !== nebulaHue) {
-    nebulaHue = hue;
-    nebula = makeCanvas(NEBULA, NEBULA);
-    g = nebula.getContext('2d');
-    let seed = hue * 9301 + 49297;
-    const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
-    for (let i = 0; i < 18; i++) {
-      const x = rnd() * NEBULA, y = rnd() * NEBULA, r = 60 + rnd() * 170;
-      const h = hue + (rnd() - 0.5) * 90;
-      const a = 0.05 + rnd() * 0.09;
-      // draw wrapped copies so the tile repeats seamlessly
-      for (const ox of [-NEBULA, 0, NEBULA]) {
-        for (const oy of [-NEBULA, 0, NEBULA]) {
-          const bx = x + ox, by = y + oy;
-          if (bx + r < 0 || bx - r > NEBULA || by + r < 0 || by - r > NEBULA) continue;
-          const b = g.createRadialGradient(bx, by, 0, bx, by, r);
-          b.addColorStop(0, `hsla(${h} 85% 55% / ${a})`);
-          b.addColorStop(1, `hsla(${h} 85% 55% / 0)`);
-          g.fillStyle = b;
-          g.fillRect(bx - r, by - r, r * 2, r * 2);
-        }
+function buildNebula(hue) {
+  nebulaHue = hue;
+  nebula = makeCanvas(NEBULA, NEBULA);
+  const g = nebula.getContext('2d');
+  let seed = hue * 9301 + 49297;
+  const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+  for (let i = 0; i < 18; i++) {
+    const x = rnd() * NEBULA, y = rnd() * NEBULA, r = 60 + rnd() * 170;
+    const h = hue + (rnd() - 0.5) * 90;
+    const a = 0.05 + rnd() * 0.09;
+    // draw wrapped copies so the tile repeats seamlessly
+    for (const ox of [-NEBULA, 0, NEBULA]) {
+      for (const oy of [-NEBULA, 0, NEBULA]) {
+        const bx = x + ox, by = y + oy;
+        if (bx + r < 0 || bx - r > NEBULA || by + r < 0 || by - r > NEBULA) continue;
+        const b = g.createRadialGradient(bx, by, 0, bx, by, r);
+        b.addColorStop(0, `hsla(${h} 85% 55% / ${a})`);
+        b.addColorStop(1, `hsla(${h} 85% 55% / 0)`);
+        g.fillStyle = b;
+        g.fillRect(bx - r, by - r, r * 2, r * 2);
       }
     }
   }
@@ -505,11 +527,36 @@ export function viewScale(W, H) {
   return Math.max(0.72, Math.min(1.1, Math.min(W, H) / 430));
 }
 
+// Per-frame scratch state, reused so the hot path allocates nothing.
+let VW = 0, VH = 0;
+const visEnemies = [];
+const visPickups = [];
+const marks = [];
+function inView(x, y, r) {
+  return x + r > CX && x - r < CX + VW && y + r > CY && y - r < CY + VH;
+}
+// Enemy radius never changes after spawn, so each enemy keeps its own sprite pair.
+function enemySprites(e) {
+  if (!e.spr) e.spr = [enemySprite(e.type, e.r, e.def.color, false), enemySprite(e.type, e.r, e.def.color, true)];
+  return e.spr;
+}
+function spawnScale(e) {
+  const a = Math.min(1, (e.age ?? 1) / 0.25);
+  return a < 1 ? 1 - Math.pow(1 - a, 3) + Math.sin(a * Math.PI) * 0.15 : 1;
+}
+const GLOW_BUDGET = 110; // above this many visible enemies, only elites/bosses glow
+const ELITE_DASH = [7, 6];
+const NO_DASH = [];
+const FONT_SMALL = '900 14px system-ui, sans-serif';
+const FONT_BIG = '900 18px system-ui, sans-serif';
+
 export function render(ctx, game, W, H, dpr, now, dt) {
   const s = viewScale(W, H);
   const p = game.player;
-  const hue = game.stage.hue;
-  buildBackground(W, H, hue, dpr);
+  buildBackground(W, H, game.stage.hue);
+  // Shake and hurt tint only animate while the run is live; behind pause and
+  // level-up overlays (dt === 0 or not playing) the frame stays still.
+  const live = game.state === 'play' && dt > 0;
 
   // smoothed camera that leads slightly in the direction of travel
   const tx = p.x + p.vx * 0.22, ty = p.y + p.vy * 0.22;
@@ -518,62 +565,65 @@ export function render(ctx, game, W, H, dpr, now, dt) {
   game.cam.x += (tx - game.cam.x) * follow;
   game.cam.y += (ty - game.cam.y) * follow;
   let shx = 0, shy = 0;
-  if (game.shake > 0) {
+  if (live && game.shake > 0) {
     shx = (Math.random() - 0.5) * game.shake;
     shy = (Math.random() - 0.5) * game.shake;
   }
   K = dpr * s;
-  CX = game.cam.x - W / 2 / s + shx;
-  CY = game.cam.y - H / 2 / s + shy;
-  const vw = W / s, vh = H / s;
-  const inView = (x, y, r) => x + r > CX && x - r < CX + vw && y + r > CY && y - r < CY + vh;
+  VW = W / s;
+  VH = H / s;
+  CX = game.cam.x - VW / 2 + shx;
+  CY = game.cam.y - VH / 2 + shy;
 
   // ---- background (device space) ----
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = 'source-over';
   ctx.globalAlpha = 1;
-  ctx.drawImage(bgGrad, 0, 0);
+  ctx.drawImage(bgGrad, 0, 0, W * dpr, H * dpr);
   {
     const tile = NEBULA * dpr;
     const ox = -(((CX * K * 0.3) % tile) + tile) % tile;
     const oy = -(((CY * K * 0.3) % tile) + tile) % tile;
     for (let x = ox; x < W * dpr; x += tile) for (let y = oy; y < H * dpr; y += tile) ctx.drawImage(nebula, x, y, tile, tile);
   }
+  ctx.fillStyle = starColor;
   for (const st of STARS) {
     const x = (((st.x * W - CX * s * st.z) % W) + W) % W;
     const y = (((st.y * H - CY * s * st.z) % H) + H) % H;
-    const tw = 0.55 + 0.45 * Math.sin(now * 0.002 + st.tw);
-    ctx.fillStyle = `hsla(${hue} 60% 90% / ${(0.2 + st.z * 1.4) * tw})`;
+    ctx.globalAlpha = Math.min(1, (0.2 + st.z * 1.4) * (0.55 + 0.45 * Math.sin(now * 0.002 + st.tw)));
     ctx.fillRect(x * dpr, y * dpr, st.s * dpr, st.s * dpr);
   }
+  ctx.globalAlpha = 1;
 
   // ---- grid ----
   world(ctx);
-  ctx.strokeStyle = `hsla(${hue} 90% 65% / 0.06)`;
+  ctx.strokeStyle = gridColor;
   ctx.lineWidth = 1 / s;
   ctx.beginPath();
   const G = 96;
-  for (let x = Math.floor(CX / G) * G; x < CX + vw; x += G) { ctx.moveTo(x, CY); ctx.lineTo(x, CY + vh); }
-  for (let y = Math.floor(CY / G) * G; y < CY + vh; y += G) { ctx.moveTo(CX, y); ctx.lineTo(CX + vw, y); }
+  for (let x = Math.floor(CX / G) * G; x < CX + VW; x += G) { ctx.moveTo(x, CY); ctx.lineTo(x, CY + VH); }
+  for (let y = Math.floor(CY / G) * G; y < CY + VH; y += G) { ctx.moveTo(CX, y); ctx.lineTo(CX + VW, y); }
   ctx.stroke();
+
+  visEnemies.length = 0;
+  for (const e of game.enemies) if (!e.dead && inView(e.x, e.y, e.r * 2)) visEnemies.push(e);
+  visPickups.length = 0;
+  for (const k of game.pickups) if (inView(k.x, k.y, 24)) visPickups.push(k);
 
   // ---- ground shadows ----
   const sh = shadowSprite();
   ctx.globalAlpha = 0.5;
-  for (const e of game.enemies) {
-    if (e.dead || !inView(e.x, e.y, e.r * 2)) continue;
-    blit(ctx, sh, e.x + e.r * 0.2, e.y + e.r * 0.75, 0, e.r / 17);
-  }
+  for (const e of visEnemies) blit(ctx, sh, e.x + e.r * 0.2, e.y + e.r * 0.75, 0, (e.r / 17) * spawnScale(e));
   blit(ctx, sh, p.x + 3, p.y + 14, 0, 0.8);
   ctx.globalAlpha = 1;
 
   // ---- pickups ----
-  const visiblePickups = [];
-  for (const k of game.pickups) if (inView(k.x, k.y, 24)) visiblePickups.push(k);
   ctx.globalCompositeOperation = 'lighter';
-  for (const k of visiblePickups) {
-    if (k.kind === 'xp') glowAt(ctx, GEM[gemTier(k.value)].color, k.x, k.y, GEM[gemTier(k.value)].size * 2.6, 0.45);
-    else if (k.kind === 'chest') {
+  for (const k of visPickups) {
+    if (k.kind === 'xp') {
+      const gm = GEM[gemTier(k.value)];
+      glowAt(ctx, gm.color, k.x, k.y, gm.size * 3.2, 0.7);
+    } else if (k.kind === 'chest') {
       ctx.globalAlpha = 0.6 + 0.2 * Math.sin(now * 0.005);
       blit(ctx, beamSprite(), k.x, k.y - 64, 0, 1);
       ctx.globalAlpha = 1;
@@ -581,14 +631,14 @@ export function render(ctx, game, W, H, dpr, now, dt) {
     } else glowAt(ctx, PICKUP_GLOW[k.kind], k.x, k.y, 16, 0.5);
   }
   ctx.globalCompositeOperation = 'source-over';
-  for (const k of visiblePickups) {
+  for (const k of visPickups) {
     const ph = now * 0.004 + k.x * 0.05;
     const bob = Math.sin(ph) * 1.6;
     if (k.kind === 'xp') {
       blit(ctx, gemSprite(gemTier(k.value)), k.x, k.y + bob, Math.sin(ph * 0.7) * 0.25);
       if (Math.sin(now * 0.003 + k.y) > 0.96) {
         // occasional sparkle
-        place(ctx, k.x + 3, k.y - 5 + bob);
+        place(ctx, k.x + 3, k.y - 6 + bob);
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(-0.6, -3, 1.2, 6);
         ctx.fillRect(-3, -0.6, 6, 1.2);
@@ -631,32 +681,33 @@ export function render(ctx, game, W, H, dpr, now, dt) {
   ctx.globalAlpha = 1;
 
   // ---- enemies ----
-  const visibleEnemies = [];
-  for (const e of game.enemies) if (!e.dead && inView(e.x, e.y, e.r * 2)) visibleEnemies.push(e);
-  for (const e of visibleEnemies) glowAt(ctx, e.def.color, e.x, e.y, e.r * (e.elite || e.def.boss ? 2.6 : 1.9), 0.45);
+  const crowded = visEnemies.length > GLOW_BUDGET;
+  for (const e of visEnemies) {
+    if (crowded && !e.elite && !e.def.boss) continue;
+    glowAt(ctx, e.def.color, e.x, e.y, e.r * (e.elite || e.def.boss ? 2.6 : 1.9) * spawnScale(e), 0.45);
+  }
   ctx.globalCompositeOperation = 'source-over';
-  for (const e of visibleEnemies) {
-    const a = Math.min(1, (e.age ?? 1) / 0.25);
-    const pop = a < 1 ? 1 - Math.pow(1 - a, 3) * 1.0 + Math.sin(a * Math.PI) * 0.15 : 1;
+  for (const e of visEnemies) {
+    const pop = spawnScale(e);
     const face = Math.atan2(p.y - e.y, p.x - e.x);
     const rot = e.type === 'dart' || e.type === 'spitter' || e.type === 'brute' ? face : e.type === 'splitter' ? e.spin * 0.6 : e.spin * 0.5;
-    blit(ctx, enemySprite(e.type, e.r, e.def.color, e.flash > 0), e.x, e.y, rot, pop);
+    const spr = enemySprites(e);
+    blit(ctx, e.flash > 0 ? spr[1] : spr[0], e.x, e.y, rot, pop);
     if ((e.type === 'drone' || e.type === 'boss') && e.flash <= 0) {
-      place(ctx, e.x + Math.cos(face) * e.r * 0.14, e.y + Math.sin(face) * e.r * 0.14);
+      place(ctx, e.x + Math.cos(face) * e.r * 0.12, e.y + Math.sin(face) * e.r * 0.12);
       ctx.fillStyle = '#fff4f6';
-      ctx.beginPath(); ctx.arc(0, 0, e.r * 0.2 * pop, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, e.r * 0.25 * pop, 0, TAU); ctx.fill();
       ctx.fillStyle = '#1a0008';
-      ctx.beginPath(); ctx.arc(Math.cos(face) * e.r * 0.07, Math.sin(face) * e.r * 0.07, e.r * 0.09 * pop, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(Math.cos(face) * e.r * 0.08, Math.sin(face) * e.r * 0.08, e.r * 0.12 * pop, 0, TAU); ctx.fill();
     }
     if (e.elite) {
       world(ctx);
-      ctx.save();
-      ctx.setLineDash([7, 6]);
+      ctx.setLineDash(ELITE_DASH);
       ctx.lineDashOffset = -now / 25;
       ctx.strokeStyle = '#ffd60a';
       ctx.lineWidth = 2.5;
       ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 1.4, 0, TAU); ctx.stroke();
-      ctx.restore();
+      ctx.setLineDash(NO_DASH);
       const w = e.r * 2;
       ctx.fillStyle = OUTLINE;
       ctx.fillRect(e.x - w / 2 - 1, e.y - e.r * 1.4 - 12, w + 2, 6);
@@ -665,12 +716,12 @@ export function render(ctx, game, W, H, dpr, now, dt) {
     }
   }
 
-  // ---- player weapons ----
+  // ---- player weapons (cyan / white / blue family) ----
   ctx.globalCompositeOperation = 'lighter';
   for (const b of game.bullets) glowAt(ctx, '#38d6ff', b.x, b.y, 11, 0.55);
   for (const m of game.missiles) {
     const fl = 0.8 + Math.random() * 0.4;
-    glowAt(ctx, '#ffb347', m.x - Math.cos(m.a) * 10, m.y - Math.sin(m.a) * 10, 10 * fl, 0.9);
+    glowAt(ctx, '#8ec5ff', m.x - Math.cos(m.a) * 10, m.y - Math.sin(m.a) * 10, 11 * fl, 0.95);
   }
   ctx.globalCompositeOperation = 'source-over';
   const bolt = boltSprite();
@@ -682,15 +733,15 @@ export function render(ctx, game, W, H, dpr, now, dt) {
   const orbitLv = game.weapons.orbit;
   if (orbit?.blades && orbitLv) {
     const st = WEAPONS.orbit.levels[orbitLv - 1];
-    const bl = bladeSprite();
     ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < st.count; i++) {
       for (let tr = 3; tr >= 1; tr--) {
         const a = orbit.angle - tr * 0.11 + (i / st.count) * TAU;
-        glowAt(ctx, '#62f5d3', p.x + Math.cos(a) * st.radius, p.y + Math.sin(a) * st.radius, 9, 0.18 * (4 - tr));
+        glowAt(ctx, '#38d6ff', p.x + Math.cos(a) * st.radius, p.y + Math.sin(a) * st.radius, 9, 0.18 * (4 - tr));
       }
     }
     ctx.globalCompositeOperation = 'source-over';
+    const bl = bladeSprite();
     for (const b of orbit.blades) blit(ctx, bl, b.x, b.y, orbit.angle * 4);
   }
 
@@ -708,8 +759,8 @@ export function render(ctx, game, W, H, dpr, now, dt) {
     glowAt(ctx, '#7df9ff', p.x, p.y, 30, 0.35);
   }
   ctx.globalCompositeOperation = 'source-over';
-  const hurtBlink = p.invuln > 0.25 && p.invuln < 0.6 && Math.floor(now / 60) % 2 === 0;
-  if (!hurtBlink || game.state !== 'play') blit(ctx, shipSprite(), p.x, p.y, p.face);
+  const hurtBlink = live && p.invuln > 0.25 && p.invuln < 0.6 && Math.floor(now / 60) % 2 === 0;
+  if (!hurtBlink) blit(ctx, shipSprite(), p.x, p.y, p.face);
   if (p.invuln > 0 && game.state === 'play') {
     world(ctx);
     ctx.globalAlpha = Math.min(1, p.invuln * 2) * (0.35 + 0.15 * Math.sin(now * 0.02));
@@ -724,16 +775,20 @@ export function render(ctx, game, W, H, dpr, now, dt) {
   for (const b of game.ebullets) if (inView(b.x, b.y, 16)) glowAt(ctx, '#ff2d55', b.x, b.y, b.r * 3, 0.7);
   ctx.globalCompositeOperation = 'source-over';
   const pulse = 0.5 + 0.5 * Math.sin(now * 0.015);
+  world(ctx);
+  ctx.strokeStyle = '#ff6b8b';
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.35 + 0.45 * pulse;
+  ctx.beginPath();
   for (const b of game.ebullets) {
     if (!inView(b.x, b.y, 16)) continue;
-    blit(ctx, orbSprite(b.r), b.x, b.y);
-    world(ctx);
-    ctx.globalAlpha = 0.35 + 0.45 * pulse;
-    ctx.strokeStyle = '#ff6b8b';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(b.x, b.y, b.r * (1.6 + pulse * 0.35), 0, TAU); ctx.stroke();
-    ctx.globalAlpha = 1;
+    const rr = b.r * (1.6 + pulse * 0.35);
+    ctx.moveTo(b.x + rr, b.y);
+    ctx.arc(b.x, b.y, rr, 0, TAU);
   }
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  for (const b of game.ebullets) if (inView(b.x, b.y, 16)) blit(ctx, orbSprite(b.r), b.x, b.y);
 
   // ---- particles & lightning ----
   ctx.globalCompositeOperation = 'lighter';
@@ -754,13 +809,13 @@ export function render(ctx, game, W, H, dpr, now, dt) {
       ctx.lineTo(f.x1 + (f.x2 - f.x1) * u + (Math.random() - 0.5) * 16, f.y1 + (f.y2 - f.y1) * u + (Math.random() - 0.5) * 16);
     }
     ctx.lineTo(f.x2, f.y2);
-    ctx.globalAlpha = t * 0.45;
+    ctx.globalAlpha = t * 0.55;
     ctx.strokeStyle = '#fff275';
     ctx.lineWidth = 7;
     ctx.stroke();
     ctx.globalAlpha = t;
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.2;
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
@@ -770,14 +825,13 @@ export function render(ctx, game, W, H, dpr, now, dt) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
+  ctx.lineWidth = 3.5;
+  ctx.strokeStyle = 'rgba(0,0,0,0.85)';
   for (const t of game.texts) {
     const life = t.life / t.max;
     ctx.globalAlpha = Math.min(1, life * 2.5);
-    const sc = t.big ? 1 + Math.max(0, life - 0.7) * 1.5 : 1;
-    place(ctx, t.x, t.y, 0, sc);
-    ctx.font = `900 ${t.big ? 16 : 11}px system-ui, sans-serif`;
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+    place(ctx, t.x, t.y, 0, t.big ? 1 + Math.max(0, life - 0.7) * 1.5 : 1);
+    ctx.font = t.big ? FONT_BIG : FONT_SMALL;
     ctx.strokeText(t.txt, 0, 0);
     ctx.fillStyle = t.color;
     ctx.fillText(t.txt, 0, 0);
@@ -796,34 +850,35 @@ export function render(ctx, game, W, H, dpr, now, dt) {
   ctx.fillStyle = hpFrac > 0.5 ? '#3ee08f' : hpFrac > 0.25 ? '#ffd166' : '#ff4d6d';
   ctx.fillRect(p.x - bw / 2, p.y + 22.5, bw * hpFrac, 4);
 
-  // ---- screen space overlays ----
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const marks = [];
-  for (const e of game.enemies) if (!e.dead && (e.elite || e.def.boss)) marks.push({ x: e.x, y: e.y, c: e.def.boss ? e.def.color : '#ffd60a' });
-  for (const k of game.pickups) if (k.kind === 'chest') marks.push({ x: k.x, y: k.y, c: PICKUP_GLOW.chest });
+  // ---- screen space overlays: off-screen markers for boss, elites, chests ----
+  marks.length = 0;
+  for (const e of game.enemies) if (!e.dead && (e.elite || e.def.boss)) marks.push(e);
+  for (const k of game.pickups) if (k.kind === 'chest') marks.push(k);
   for (const m of marks) {
     const sx = (m.x - CX) * s, sy = (m.y - CY) * s;
     if (sx > 0 && sx < W && sy > 0 && sy < H) continue;
+    const c = m.kind === 'chest' ? PICKUP_GLOW.chest : m.def.boss ? m.def.color : '#ffd60a';
     const a = Math.atan2(sy - H / 2, sx - W / 2);
     const pad = 28;
     const ex = Math.max(pad, Math.min(W - pad, W / 2 + Math.cos(a) * W));
     const ey = Math.max(pad + 90, Math.min(H - pad, H / 2 + Math.sin(a) * H));
-    ctx.setTransform(dpr, 0, 0, dpr, ex * dpr, ey * dpr);
-    ctx.rotate(a);
+    const ca = Math.cos(a) * dpr, sa = Math.sin(a) * dpr;
+    ctx.setTransform(ca, sa, -sa, ca, ex * dpr, ey * dpr);
     ctx.fillStyle = OUTLINE;
     ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(-8, 11); ctx.lineTo(-8, -11); ctx.fill();
-    ctx.fillStyle = m.c;
+    ctx.fillStyle = c;
     ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-6, 8); ctx.lineTo(-6, -8); ctx.fill();
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.drawImage(vignette, 0, 0);
-  if (game.hurtFlash > 0) {
-    ctx.fillStyle = `rgba(255,40,70,${(game.hurtFlash / 0.18) * 0.22})`;
+  if (live && game.hurtFlash > 0) {
+    ctx.globalAlpha = (game.hurtFlash / 0.18) * 0.22;
+    ctx.fillStyle = '#ff2846';
     ctx.fillRect(0, 0, W * dpr, H * dpr);
+    ctx.globalAlpha = 1;
   }
   if (hpFrac < 0.3 && game.state === 'play') {
     ctx.globalAlpha = 0.28 + Math.sin(now * 0.008) * 0.1;
-    ctx.drawImage(hurtVignette, 0, 0);
+    ctx.drawImage(getHurtVignette(W, H), 0, 0, W * dpr, H * dpr);
     ctx.globalAlpha = 1;
   }
 }

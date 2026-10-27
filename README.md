@@ -16,11 +16,14 @@ A neon survival shooter built for phones. Drag anywhere to fly, your weapons fir
 
 ## Development
 
-No build step. Serve the folder and open it:
+To play locally, just double-click `index.html`. It runs straight from disk, saves included.
+
+The source lives in `src/` as ES modules. Browsers won't load modules from `file://`, so `index.html` loads `glowswarm.js` instead: a classic-script bundle built from `src/` with no dependencies. **After editing anything in `src/`, run `npm run build`.** `npm test` fails if the bundle is stale.
 
 ```sh
-npm run serve        # http://localhost:8080
-npm test             # simulation + save tests (Node 22+)
+npm run build        # src/*.js -> glowswarm.js
+npm run serve        # http://localhost:8080 (optional; add ?sw to test the offline worker)
+npm test             # bundle freshness + simulation + save tests (Node 22+)
 node tests/sim.mjs 0 2 5   # balance probe: stage, meta level, runs
 ```
 
@@ -32,6 +35,7 @@ node tests/sim.mjs 0 2 5   # balance probe: stage, meta level, runs
 | `src/main.js` | Screens, input, game loop, save wiring |
 | `src/save.js` | Validated `localStorage` persistence and run-result accounting |
 | `src/audio.js` | WebAudio synth sound effects and generative music |
+| `glowswarm.js` | Generated bundle of `src/` that `index.html` loads (`tools/build.mjs`) |
 | `sw.js` | Service worker that precaches every asset and serves it cache-first |
 
 The service worker's cache name is `glowswarm-dev` locally. The deploy workflow (`.github/workflows/pages.yml`) runs the tests, stamps the cache name with the commit SHA and publishes to GitHub Pages. That way every deploy ships a fresh, consistent offline cache. While developing locally, hard-reload or unregister the worker in DevTools to see changes.

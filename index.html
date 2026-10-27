@@ -123,6 +123,7 @@
   </section>
 
   <noscript>Glow Swarm needs JavaScript to run.</noscript>
-  <script type="module" src="src/main.js"></script>
+  <!-- Classic script (built from src/ by `npm run build`) so the game also runs when index.html is opened straight from disk. -->
+  <script defer src="glowswarm.js"></script>
 </body>
 </html>

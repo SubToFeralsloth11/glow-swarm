@@ -16,6 +16,7 @@ export function mulberry32(seed) {
 const ELITE = { elite: true, hpMul: 6, scale: 1.45 };
 const PARTICLE_CAP = 450;
 const TEXT_CAP = 40;
+const FX_CAP = 140;
 const CELL = 64;
 const MAX_WEAPONS = 4;
 
@@ -65,6 +66,7 @@ export class Game {
     this.state = 'play'; // play | levelup | dead | won
     this.endTimer = 0;
     this.shake = 0;
+    this.hurtFlash = 0; // seconds of red screen flash left after taking a hit
     this.input = { x: 0, y: 0 };
     this.viewW = 420;
     this.viewH = 800;
@@ -212,6 +214,12 @@ export class Game {
     this.choices = null;
     this.state = 'play';
     this.player.invuln = Math.max(this.player.invuln, 0.4);
+    const p = this.player;
+    this.fx.push({ kind: 'ring', x: p.x, y: p.y, r: 120, life: 0.5, max: 0.5, color: '#ffd60a' });
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2;
+      this.particle(p.x, p.y, Math.cos(a) * 220, Math.sin(a) * 220, '#ffe066', 0.5, 3);
+    }
   }
 
   reroll() {
@@ -273,6 +281,7 @@ export class Game {
     p.invuln = Math.max(0, p.invuln - dt);
     if (this.regen > 0) p.hp = Math.min(p.maxHp, p.hp + this.regen * dt);
     this.shake = Math.max(0, this.shake - dt * 30);
+    this.hurtFlash = Math.max(0, this.hurtFlash - dt);
   }
 
   buildGrid() {
@@ -335,7 +344,7 @@ export class Game {
       speed: def.speed * (1 + t / 900) * (0.9 + this.rng() * 0.2) * (opts.speedMul || 1),
       dmg: Math.round(def.dmg * (1 + t / 420) * Math.sqrt(this.stage.diff)),
       flash: 0, orbitCd: 0, fire: def.fireEvery ? def.fireEvery * (0.5 + this.rng()) : 0,
-      elite: !!opts.elite, dead: false, spin: this.rng() * 6, minionTimer: 5,
+      elite: !!opts.elite, dead: false, spin: this.rng() * 6, minionTimer: 5, age: 0,
     };
     this.enemies.push(e);
     return e;
@@ -517,7 +526,7 @@ export class Game {
       m.y += Math.sin(m.a) * m.v * dt;
       m.life -= dt;
       m.trail -= dt;
-      if (m.trail <= 0) { m.trail = 0.03; this.particle(m.x, m.y, 0, 0, '#ff70a6', 0.3, 3); }
+      if (m.trail <= 0) { m.trail = 0.03; this.particle(m.x, m.y, 0, 0, '#ffd27a', 0.3, 3); }
       let boom = m.life <= 0;
       if (!boom) this.query(m.x, m.y, 10, (e) => {
         if ((e.x - m.x) ** 2 + (e.y - m.y) ** 2 < (e.r + 6) ** 2) { boom = true; return true; }
@@ -531,14 +540,14 @@ export class Game {
   }
 
   explode(x, y, radius, dmg) {
-    this.fx.push({ kind: 'blast', x, y, r: radius, life: 0.3, max: 0.3, color: '#ff70a6' });
+    this.fx.push({ kind: 'blast', x, y, r: radius, life: 0.3, max: 0.3, color: '#8ec5ff' });
     this.query(x, y, radius, (e) => {
       const dx = e.x - x, dy = e.y - y, d = Math.hypot(dx, dy) || 1;
       if (d < radius + e.r) this.damage(e, dmg, (dx / d) * 220, (dy / d) * 220);
     });
     for (let i = 0; i < 10; i++) {
       const a = this.rng() * Math.PI * 2, s = 60 + this.rng() * 160;
-      this.particle(x, y, Math.cos(a) * s, Math.sin(a) * s, '#ffb3c6', 0.4, 3);
+      this.particle(x, y, Math.cos(a) * s, Math.sin(a) * s, '#d6ecff', 0.4, 3);
     }
     this.hooks.sfx('boom');
   }
@@ -569,6 +578,7 @@ export class Game {
       const a = this.rng() * Math.PI * 2, s = 40 + this.rng() * (def.boss ? 380 : 160);
       this.particle(e.x, e.y, Math.cos(a) * s, Math.sin(a) * s, def.color, 0.5 + this.rng() * 0.3, def.boss ? 5 : 3);
     }
+    if (this.fx.length < FX_CAP) this.fx.push({ kind: 'pop', x: e.x, y: e.y, r: e.r * (def.boss ? 4 : 2.2), life: 0.35, max: 0.35, color: def.color });
     this.dropGem(e.x, e.y, def.xp * (e.elite ? 5 : 1));
     if (this.rng() < def.coin) this.addPickup('coin', e.x + 6, e.y, 1);
     const r = this.rng();
@@ -628,6 +638,7 @@ export class Game {
       const dx = p.x - e.x, dy = p.y - e.y;
       const d = Math.hypot(dx, dy) || 1;
       e.flash = Math.max(0, e.flash - dt);
+      e.age += dt;
       e.orbitCd -= dt;
       e.spin += dt * (e.def.boss ? 0.8 : 2);
       // Enemies left far behind are recycled ahead of the player to keep pressure on.
@@ -719,6 +730,7 @@ export class Game {
     const dmg = Math.max(1, amount - this.armor);
     p.hp -= dmg;
     p.invuln = PLAYER_BASE.invuln;
+    this.hurtFlash = 0.18;
     this.shake = Math.max(this.shake, 9);
     this.hooks.sfx('hurt');
     this.hooks.haptic(45);
@@ -777,6 +789,8 @@ export class Game {
   collect(k) {
     if (k.kind === 'xp') {
       this.xp += k.value * (1 + this.meta.xp);
+      // cosmetic only: Math.random keeps the seeded gameplay RNG stream untouched
+      this.particle(this.player.x, this.player.y, (Math.random() - 0.5) * 120, -40 - Math.random() * 80, '#7dffb0', 0.3, 2.5);
       this.hooks.sfx('gem');
     } else if (k.kind === 'coin') {
       this.coins += k.value;

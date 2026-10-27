@@ -14,7 +14,7 @@ let game = null; // active run
 let demo = null; // attract-mode game behind the menus
 let paused = false;
 let selectedStage = Math.min(save.unlockedStages - 1, STAGES.length - 1);
-let W = 0, H = 0;
+let W = 0, H = 0, DPR = 1;
 let lastAutosave = 0;
 let installPrompt = null;
 const screenStack = [];
@@ -23,7 +23,7 @@ applyAudioSettings();
 
 // ---------- canvas sizing ----------
 function resize() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const dpr = (DPR = Math.min(window.devicePixelRatio || 1, 2));
   W = window.innerWidth;
   H = window.innerHeight;
   canvas.width = Math.round(W * dpr);
@@ -607,7 +607,7 @@ function frame(now) {
       }
     }
     if (game) {
-      render(ctx, game, W, H, now);
+      render(ctx, game, W, H, DPR, now, paused ? 0 : dt);
       updateHud();
     }
   } else {
@@ -618,7 +618,7 @@ function frame(now) {
     demo.xp = 0;
     demo.time = 40; // keep the attract-mode swarm at a fixed, light difficulty
     demo.update(dt);
-    render(ctx, demo, W, H, now);
+    render(ctx, demo, W, H, DPR, now, dt);
   }
   requestAnimationFrame(frame);
 }

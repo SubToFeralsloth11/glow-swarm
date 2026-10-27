@@ -8,13 +8,15 @@ export const STAGES = [
 ];
 
 // hp/speed/dmg are base values; hp is scaled by stage difficulty and elapsed time.
+// Colour language: enemies are all warm/hostile (red, orange, magenta, violet);
+// XP is green, coins gold, the player and its shots cyan/white.
 export const ENEMIES = {
-  drone: { hp: 8, speed: 72, r: 12, dmg: 8, xp: 1, color: '#ff4d6d', coin: 0.14 },
-  dart: { hp: 7, speed: 135, r: 9, dmg: 6, xp: 1, color: '#ffd166', coin: 0.14 },
-  spitter: { hp: 22, speed: 50, r: 13, dmg: 8, xp: 3, color: '#06d6a0', coin: 0.3, fireEvery: 2.6 },
-  brute: { hp: 70, speed: 44, r: 22, dmg: 16, xp: 6, color: '#c77dff', coin: 0.6 },
-  splitter: { hp: 34, speed: 60, r: 16, dmg: 10, xp: 3, color: '#4cc9f0', coin: 0.3, splits: 2 },
-  boss: { hp: 1800, speed: 58, r: 46, dmg: 26, xp: 60, color: '#ff006e', coin: 1, boss: true, fireEvery: 3.2 },
+  drone: { hp: 8, speed: 72, r: 12, dmg: 8, xp: 1, color: '#ff3b5c', coin: 0.14 },
+  dart: { hp: 7, speed: 135, r: 9, dmg: 6, xp: 1, color: '#ff8a1f', coin: 0.14 },
+  spitter: { hp: 22, speed: 50, r: 13, dmg: 8, xp: 3, color: '#ff4fd8', coin: 0.3, fireEvery: 2.6 },
+  brute: { hp: 70, speed: 44, r: 22, dmg: 16, xp: 6, color: '#a855f7', coin: 0.6 },
+  splitter: { hp: 34, speed: 60, r: 16, dmg: 10, xp: 3, color: '#7b6cff', coin: 0.3, splits: 2 },
+  boss: { hp: 1800, speed: 58, r: 46, dmg: 26, xp: 60, color: '#ff1f4b', coin: 1, boss: true, fireEvery: 3.2 },
 };
 
 // Time (s) at which each enemy joins the random spawn table, and its weight.
@@ -61,7 +63,7 @@ export const WEAPONS = {
     ],
   },
   nova: {
-    name: 'Nova Pulse', icon: '✺', color: '#ff9e00',
+    name: 'Nova Pulse', icon: '✺', color: '#a5f3ff',
     desc: 'A shockwave that blasts enemies away.',
     levels: [
       { cd: 3.0, dmg: 20, radius: 110 },
@@ -72,7 +74,7 @@ export const WEAPONS = {
     ],
   },
   missile: {
-    name: 'Seeker Missiles', icon: '➹', color: '#ff70a6',
+    name: 'Seeker Missiles', icon: '➹', color: '#8ec5ff',
     desc: 'Homing rockets that explode on impact.',
     levels: [
       { cd: 1.9, dmg: 24, count: 1, blast: 52 },

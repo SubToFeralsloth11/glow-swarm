@@ -611,7 +611,8 @@ export function render(ctx, game, W, H, dpr, now, dt) {
   visPickups.length = 0;
   let gems = 0;
   for (const k of game.pickups) {
-    if (!inView(k.x, k.y, 24)) continue;
+    // margin covers the widest glow (~34 units) and a chest's 128-unit beam
+    if (!inView(k.x, k.y, k.kind === 'chest' ? 140 : 40)) continue;
     visPickups.push(k);
     if (k.kind === 'xp') gems++;
   }

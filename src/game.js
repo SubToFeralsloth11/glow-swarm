@@ -14,7 +14,7 @@ export function mulberry32(seed) {
 }
 
 const ENEMY_CAP = 240; // regular spawns stop here
-const ENEMY_HARD_CAP = 320; // scripted spawns (swarms, splits, minions) stop here; only the boss ignores it
+export const ENEMY_HARD_CAP = 320; // scripted spawns (swarms, splits, minions) stop here; only the boss ignores it
 const ELITE = { elite: true, hpMul: 6, scale: 1.45 };
 const PICKUP_CAP = 350;
 const PARTICLE_CAP = 450;
@@ -131,6 +131,8 @@ export class Game {
       enemies: this.enemies
         .filter((e) => !e.dead && !e.def.boss)
         .map((e) => [e.type, Math.round(e.x - this.player.x), Math.round(e.y - this.player.y), Math.round((e.hp / e.maxHp) * 1000) / 1000, e.elite ? 1 : 0]),
+      // Uncollected loot, so a reload doesn't throw away XP and coins.
+      pickups: this.pickups.map((k) => [k.kind, Math.round(k.x - this.player.x), Math.round(k.y - this.player.y), k.value]),
     };
   }
 
@@ -157,6 +159,7 @@ export class Game {
       const e = this.spawnEnemy(type, x, y, elite ? { ...ELITE, force: true } : { force: true });
       if (e) e.hp = e.maxHp * frac;
     }
+    for (const [kind, x, y, value] of s.pickups || []) this.addPickup(kind, x, y, value);
   }
 
   result() {

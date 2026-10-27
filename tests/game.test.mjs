@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Game, mulberry32 } from '../src/game.js';
+import { Game, mulberry32, ENEMY_HARD_CAP } from '../src/game.js';
 import { defaultSave, sanitizeRun } from '../src/save.js';
 import { WEAPONS, PASSIVES, xpForLevel } from '../src/data.js';
 import { botInput, simulate } from './sim.mjs';
@@ -102,7 +102,7 @@ test('an open level-up menu survives a save/resume exactly once', () => {
   assert.equal(g2.state, 'play');
 });
 
-test('resuming restores the swarm around the ship', () => {
+test('resuming restores the swarm and floor loot around the ship', () => {
   const { g } = newGame();
   run(g, 45);
   const alive = g.enemies.filter((e) => !e.dead);
@@ -116,6 +116,9 @@ test('resuming restores the swarm around the ship', () => {
     assert.ok(near(r.x, e.x - g.player.x) && near(r.y, e.y - g.player.y));
     assert.ok(Math.abs(r.hp / r.maxHp - e.hp / e.maxHp) < 0.002);
   });
+  const loot = (game) => game.pickups.reduce((sum, k) => sum + (k.kind === 'xp' ? k.value : 0), 0);
+  assert.equal(g2.pickups.length, g.pickups.length);
+  assert.equal(loot(g2), loot(g));
 });
 
 test('saving during the victory beat resumes into the win, not a fresh boss', () => {
@@ -133,13 +136,13 @@ test('saving during the victory beat resumes into the win, not a fresh boss', ()
   assert.equal(events.end.bosses, 1);
 });
 
-test('scripted spawns cannot grow the swarm without bound', () => {
+test('scripted spawns stop at the hard cap; only the Warden may exceed it', () => {
   const { g } = newGame();
-  for (let i = 0; i < 1000; i++) g.spawnEnemy('dart', i, 0, { force: true });
-  const n = g.enemies.length;
-  assert.ok(n < 1000);
+  let i = 0;
+  while (g.spawnEnemy('dart', i, 0, { force: true })) i++;
+  assert.equal(g.enemies.length, ENEMY_HARD_CAP);
   assert.ok(g.spawnEnemy('boss', 0, 0, { force: true }), 'the Warden always spawns');
-  assert.equal(g.enemies.length, n + 1);
+  assert.equal(g.enemies.length, ENEMY_HARD_CAP + 1);
 });
 
 test('dying ends the run once; a revive saves you first', () => {

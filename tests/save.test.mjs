@@ -54,6 +54,24 @@ test('invalid in-progress run is discarded, valid one kept', () => {
   assert.deepEqual(run.passives, { might: 2 });
 });
 
+test('prototype keys in a tampered save are ignored, not crashed on', () => {
+  const s = sanitizeSave({
+    weapons: ['constructor', '__proto__', 'zap'],
+    run: {
+      stage: 0,
+      weapons: { blaster: 1, constructor: 3, toString: 2 },
+      passives: { hasOwnProperty: 1 },
+      enemies: [['constructor', 0, 0, 1, 0], ['__proto__', 0, 0, 1, 0], ['drone', 10, 20, 0.5, 0], ['boss', 0, 0, 1, 0]],
+      pickups: [['toString', 0, 0, 1], ['xp', 5, 5, 3]],
+    },
+  });
+  assert.deepEqual(s.weapons, ['blaster', 'zap']);
+  assert.deepEqual(s.run.weapons, { blaster: 1 });
+  assert.deepEqual(s.run.passives, {});
+  assert.deepEqual(s.run.enemies, [['drone', 10, 20, 0.5, 0]]);
+  assert.deepEqual(s.run.pickups, [['xp', 5, 5, 3]]);
+});
+
 test('winning a stage unlocks the next one, pays a bonus and clears the run', () => {
   const s = defaultSave();
   s.run = { stage: 0 };

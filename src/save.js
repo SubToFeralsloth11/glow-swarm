@@ -24,11 +24,15 @@ const int = (v, min, max, d) => (Number.isFinite(v) ? Math.max(min, Math.min(max
 const num = (v, min, max, d) => (Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : d);
 const bool = (v, d) => (typeof v === 'boolean' ? v : d);
 
+// Own-property lookup so keys like "constructor" or "__proto__" in a tampered save never match.
+const has = (table, key) => typeof key === 'string' && Object.hasOwn(table, key);
+const PICKUP_KINDS = new Set(['xp', 'coin', 'heart', 'vacuum', 'chest']);
+
 function sanitizeLevels(obj, table, maxOf) {
   const out = {};
   if (!obj || typeof obj !== 'object') return out;
   for (const [k, v] of Object.entries(obj)) {
-    if (table[k]) {
+    if (has(table, k)) {
       const lv = int(v, 0, maxOf(k), 0);
       if (lv > 0) out[k] = lv;
     }
@@ -62,6 +66,7 @@ export function sanitizeRun(run) {
     bossHp: Number.isFinite(run.bossHp) ? Math.max(0.01, Math.min(1, run.bossHp)) : null,
     bossDefeated: bool(run.bossDefeated, false),
     enemies: sanitizeEnemies(run.enemies),
+    pickups: sanitizePickups(run.pickups),
   };
 }
 
@@ -70,9 +75,21 @@ function sanitizeEnemies(list) {
   if (!Array.isArray(list)) return [];
   const out = [];
   for (const e of list.slice(0, 320)) {
-    if (!Array.isArray(e) || !ENEMIES[e[0]] || ENEMIES[e[0]].boss) continue;
+    if (!Array.isArray(e) || !has(ENEMIES, e[0]) || ENEMIES[e[0]].boss) continue;
     if (![e[1], e[2], e[3]].every(Number.isFinite)) continue;
     out.push([e[0], num(e[1], -3000, 3000, 0), num(e[2], -3000, 3000, 0), num(e[3], 0.01, 1, 1), e[4] ? 1 : 0]);
+  }
+  return out;
+}
+
+// Saved floor loot entries: [kind, dx, dy, value].
+function sanitizePickups(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const k of list.slice(0, 350)) {
+    if (!Array.isArray(k) || !PICKUP_KINDS.has(k[0])) continue;
+    if (![k[1], k[2], k[3]].every(Number.isFinite)) continue;
+    out.push([k[0], num(k[1], -3000, 3000, 0), num(k[2], -3000, 3000, 0), num(k[3], 1, 1e6, 1)]);
   }
   return out;
 }
@@ -85,7 +102,7 @@ export function sanitizeSave(raw) {
   for (const k of Object.keys(META)) s.meta[k] = int(raw.meta?.[k], 0, META[k].max, 0);
   s.unlockedStages = int(raw.unlockedStages, 1, STAGES.length, 1);
   if (Array.isArray(raw.weapons)) {
-    s.weapons = [...new Set(['blaster', ...raw.weapons.filter((w) => WEAPONS[w])])];
+    s.weapons = [...new Set(['blaster', ...raw.weapons.filter((w) => has(WEAPONS, w))])];
   }
   s.startWeapon = s.weapons.includes(raw.startWeapon) ? raw.startWeapon : 'blaster';
   if (raw.best && typeof raw.best === 'object') {

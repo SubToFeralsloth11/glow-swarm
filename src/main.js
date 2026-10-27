@@ -495,6 +495,7 @@ const input = (() => {
   canvas.addEventListener('pointercancel', up);
   window.addEventListener('keydown', (e) => {
     keys.add(e.key.toLowerCase());
+    if (e.repeat) return;
     if (e.key === 'Escape' || e.key === 'p') { if (game && !paused) pause(); else if (game && paused) resume(); }
   });
   window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));

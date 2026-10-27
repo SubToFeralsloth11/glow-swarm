@@ -130,6 +130,36 @@ test('boss spawns at the stage timer and killing it wins the stage', () => {
   assert.equal(events.end.won, true);
 });
 
+test('reloading mid boss fight keeps the Warden wounded', () => {
+  const { g } = newGame();
+  g.time = g.stage.duration;
+  g.nextElite = g.nextSwarm = 1e9;
+  g.update(1 / 60);
+  g.boss.hp = g.boss.maxHp * 0.25;
+  const { g: g2 } = newGame({ snapshot: sanitizeRun(JSON.parse(JSON.stringify(g.snapshot()))) });
+  g2.update(1 / 60);
+  assert.ok(g2.boss);
+  assert.ok(Math.abs(g2.boss.hp / g2.boss.maxHp - 0.25) < 1e-9);
+});
+
+test('Second Life blast clears the swarm but never kills the Warden', () => {
+  const save = defaultSave();
+  save.meta.revive = 1;
+  const { g, events } = newGame({ save });
+  g.time = g.stage.duration;
+  g.update(1 / 60);
+  g.boss.x = g.player.x + 60;
+  g.boss.y = g.player.y;
+  const drone = g.spawnEnemy('drone', g.player.x - 40, g.player.y, { force: true });
+  g.buildGrid();
+  g.hurtPlayer(9999);
+  assert.equal(drone.dead, true);
+  assert.equal(g.boss.dead, false);
+  assert.equal(g.bosses, 0);
+  assert.equal(g.endTimer, 0, 'no victory countdown started');
+  assert.equal(events.end, null);
+});
+
 test('elite drops a chest that grants a free level-up', () => {
   const { g } = newGame();
   const e = g.spawnEnemy('brute', 30, 0, { elite: true, force: true });

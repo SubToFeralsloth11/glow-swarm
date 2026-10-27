@@ -120,6 +120,8 @@ export class Game {
       nextSwarm: this.nextSwarm,
       // An open level-up menu counts as pending so it reappears on resume.
       pendingLevelUps: this.pendingLevelUps + (this.state === 'levelup' ? 1 : 0),
+      // Fraction of Warden HP left, so a reload mid-fight doesn't heal the boss.
+      bossHp: this.boss && !this.boss.dead ? this.boss.hp / this.boss.maxHp : null,
     };
   }
 
@@ -135,6 +137,7 @@ export class Game {
     this.recalc();
     this.player.hp = Math.max(1, Math.min(s.hp, this.player.maxHp));
     this.player.invuln = 2; // grace period after resuming
+    this.restoredBossHp = s.bossHp; // applied when the Warden respawns on the first update
   }
 
   result() {
@@ -360,6 +363,7 @@ export class Game {
     if (t >= this.stage.duration && !this.bossSpawned) {
       this.bossSpawned = true;
       this.boss = this.spawnEnemy('boss', undefined, undefined, { force: true });
+      if (this.restoredBossHp != null) this.boss.hp = this.boss.maxHp * this.restoredBossHp;
       this.hooks.boss(this.boss);
       this.hooks.sfx('boss');
       this.hooks.haptic(120);
@@ -573,12 +577,18 @@ export class Game {
   }
 
   addPickup(kind, x, y, value) {
-    if (kind === 'xp' && this.pickups.length >= PICKUP_CAP) {
+    if (this.pickups.length >= PICKUP_CAP) {
+      if (kind !== 'xp') {
+        this.pickups.push({ kind, x, y, value, pulled: false, vx: 0, vy: 0, age: 0 }); // rare loot always drops
+        return;
+      }
       // Merge into an existing gem rather than dropping XP on the floor.
       for (let i = 0; i < this.pickups.length; i++) {
         const g = this.pickups[(i * 7919 + this.kills) % this.pickups.length];
         if (g.kind === 'xp') { g.value += value; return; }
       }
+      this.xp += value; // field full of non-XP loot: grant it directly
+      return;
     }
     this.pickups.push({ kind, x, y, value, pulled: false, vx: 0, vy: 0, age: 0 });
   }
@@ -697,7 +707,7 @@ export class Game {
         this.fx.push({ kind: 'ring', x: p.x, y: p.y, r: 260, life: 0.7, max: 0.7, color: '#ffffff' });
         this.query(p.x, p.y, 260, (e) => {
           const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy) || 1;
-          if (d < 260) this.damage(e, 9999, (dx / d) * 600, (dy / d) * 600);
+          if (d < 260 && !e.def.boss) this.damage(e, 9999, (dx / d) * 600, (dy / d) * 600);
         });
         this.ebullets.length = 0;
         this.hooks.toast('Second Life!');

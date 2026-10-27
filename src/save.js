@@ -59,6 +59,7 @@ export function sanitizeRun(run) {
     nextElite: num(run.nextElite, 0, 3600, 60),
     nextSwarm: num(run.nextSwarm, 0, 3600, 45),
     pendingLevelUps: int(run.pendingLevelUps, 0, 99, 0),
+    bossHp: Number.isFinite(run.bossHp) ? Math.max(0.01, Math.min(1, run.bossHp)) : null,
   };
 }
 

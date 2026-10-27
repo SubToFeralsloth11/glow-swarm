@@ -3,7 +3,9 @@
 
 export const STAGES = [
   { id: 'nebula', name: 'Nebula Drift', hue: 195, diff: 1, rate: 1, duration: 300, blurb: 'A calm start. Learn to dodge.' },
-  { id: 'inferno', name: 'Inferno Belt', hue: 18, diff: 1.45, rate: 1.15, duration: 360, blurb: 'Hotter, faster, angrier.' },
+  // Stage backdrops stay cool-toned so warm enemies and red bullets always pop.
+  // (The id stays 'inferno' so existing saves keep their records.)
+  { id: 'inferno', name: 'Ion Storm', hue: 222, diff: 1.45, rate: 1.15, duration: 360, blurb: 'Faster, angrier, electric.' },
   { id: 'void', name: 'The Void', hue: 280, diff: 2, rate: 1.3, duration: 420, blurb: 'Nothing survives here. Prove it wrong.' },
 ];
 

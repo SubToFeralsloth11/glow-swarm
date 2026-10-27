@@ -7,7 +7,7 @@ A neon survival shooter built for phones. Drag anywhere to fly, your weapons fir
 ## Features
 
 - **One-thumb controls:** a floating joystick appears wherever you touch. WASD or arrow keys work on desktop, and Esc/P pauses.
-- **Three stages:** Nebula Drift, Inferno Belt and The Void. Each one ends in a boss fight, and clearing a stage unlocks the next.
+- **Three stages:** Nebula Drift, Ion Storm and The Void. Each one ends in a boss fight, and clearing a stage unlocks the next.
 - **Build each run:** 5 weapons (Pulse Blaster, Orbit Blades, Chain Zap, Nova Pulse, Seeker Missiles) and 8 passives, each with 5 levels. You can hold up to 4 weapons.
 - **Progress between runs:** coins buy permanent boosts (HP, damage, speed, magnet, greed, XP, rerolls, Second Life) and unlock new starting weapons.
 - **Saves:** progress, records and settings live in `localStorage`. A run in progress is saved every 5 seconds, after each level-up, on pause and whenever the app goes to the background. **Continue Run** picks it up again.

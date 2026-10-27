@@ -545,7 +545,7 @@ function spawnScale(e) {
   return a < 1 ? 1 - Math.pow(1 - a, 3) + Math.sin(a * Math.PI) * 0.15 : 1;
 }
 const GLOW_BUDGET = 110; // above this many visible enemies, only elites/bosses glow
-const XP_GLOW_BUDGET = 100; // gem glows start shrinking past this many visible gems (minimum at 2x)
+const XP_GLOW_BUDGET = 100; // gem glows start shrinking past this many visible gems (minimum at 2.2x)
 const ELITE_DASH = [7, 6];
 const NO_DASH = [];
 const FONT_SMALL = '900 14px system-ui, sans-serif';
@@ -609,7 +609,12 @@ export function render(ctx, game, W, H, dpr, now, dt) {
   visEnemies.length = 0;
   for (const e of game.enemies) if (!e.dead && inView(e.x, e.y, e.r * 2)) visEnemies.push(e);
   visPickups.length = 0;
-  for (const k of game.pickups) if (inView(k.x, k.y, 24)) visPickups.push(k);
+  let gems = 0;
+  for (const k of game.pickups) {
+    if (!inView(k.x, k.y, 24)) continue;
+    visPickups.push(k);
+    if (k.kind === 'xp') gems++;
+  }
 
   // ---- ground shadows ----
   const sh = shadowSprite();
@@ -621,8 +626,6 @@ export function render(ctx, game, W, H, dpr, now, dt) {
   // ---- pickups ----
   ctx.globalCompositeOperation = 'lighter';
   // Gem glows shrink smoothly as the gem count climbs, instead of popping off at a threshold.
-  let gems = 0;
-  for (const k of visPickups) if (k.kind === 'xp') gems++;
   const crowd = Math.min(1, Math.max(0, (gems - XP_GLOW_BUDGET) / XP_GLOW_BUDGET));
   const gemGlowSize = 3.2 - crowd * 1.0, gemGlowAlpha = 0.7 - crowd * 0.3;
   for (const k of visPickups) {

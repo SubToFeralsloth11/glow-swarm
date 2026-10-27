@@ -608,8 +608,8 @@ export function render(ctx, game, W, H, dpr, now, dt) {
   ctx.stroke();
 
   visEnemies.length = 0;
-  // margin covers the widest enemy glow (2.6r on elites/bosses) plus its ground shadow
-  for (const e of game.enemies) if (!e.dead && inView(e.x, e.y, e.r * 2.8)) visEnemies.push(e);
+  // margin covers the widest enemy glow (2.6r on elites/bosses, ~2.9r at the spawn-pop peak) plus its shadow
+  for (const e of game.enemies) if (!e.dead && inView(e.x, e.y, e.r * 3)) visEnemies.push(e);
   visPickups.length = 0;
   let gems = 0;
   for (const k of game.pickups) {

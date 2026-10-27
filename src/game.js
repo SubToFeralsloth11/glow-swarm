@@ -563,8 +563,21 @@ export class Game {
     const kb = e.def.boss ? 0.08 : e.elite ? 0.35 : 1;
     e.kx += kx * kb;
     e.ky += ky * kb;
-    if (this.settings.damageNumbers && this.texts.length < TEXT_CAP) {
-      this.texts.push({ x: e.x + (this.rng() - 0.5) * 10, y: e.y - e.r, txt: String(dmg), life: 0.6, max: 0.6, color: crit ? '#ffd60a' : '#ffffff', big: crit });
+    if (this.settings.damageNumbers) {
+      const jitter = (this.rng() - 0.5) * 10;
+      // Rapid hits on one enemy add up in a single number instead of stacking a pile of them.
+      const t = e.dmgText;
+      if (t && t.life > 0.2 && this.texts.includes(t)) {
+        t.total += dmg;
+        t.txt = String(t.total);
+        t.life = t.max;
+        t.x = e.x;
+        t.y = e.y - e.r;
+        if (crit) { t.big = true; t.color = '#ffd60a'; }
+      } else if (this.texts.length < TEXT_CAP) {
+        e.dmgText = { x: e.x + jitter, y: e.y - e.r, txt: String(dmg), total: dmg, life: 0.6, max: 0.6, color: crit ? '#ffd60a' : '#ffffff', big: crit };
+        this.texts.push(e.dmgText);
+      }
     }
     this.hooks.sfx('hit');
     if (e.hp <= 0) this.kill(e);

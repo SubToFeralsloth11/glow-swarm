@@ -115,7 +115,7 @@ export function metaCost(id, level) {
 }
 
 export function xpForLevel(level) {
-  return Math.floor(3 + level * 2 + Math.pow(level, 1.5));
+  return Math.floor(3 + level * 2 + 0.8 * Math.pow(level, 1.8));
 }
 
 export const PLAYER_BASE = { hp: 100, speed: 155, magnet: 100, r: 13, invuln: 0.6 };

@@ -577,17 +577,16 @@ export class Game {
   }
 
   addPickup(kind, x, y, value) {
-    if (this.pickups.length >= PICKUP_CAP) {
-      if (kind !== 'xp') {
-        this.pickups.push({ kind, x, y, value, pulled: false, vx: 0, vy: 0, age: 0 }); // rare loot always drops
-        return;
+    // Hard cap on floor pickups. When full: XP merges into an existing gem
+    // (or is granted directly), coins are banked, hearts/vacuums are skipped.
+    // Chests still drop; they come from elites (one a minute), so stay bounded.
+    if (this.pickups.length >= PICKUP_CAP && kind !== 'chest') {
+      if (kind === 'coin') this.coins += value;
+      else if (kind === 'xp') {
+        const g = this.pickups.find((k) => k.kind === 'xp');
+        if (g) g.value += value;
+        else this.xp += value * (1 + this.meta.xp);
       }
-      // Merge into an existing gem rather than dropping XP on the floor.
-      for (let i = 0; i < this.pickups.length; i++) {
-        const g = this.pickups[(i * 7919 + this.kills) % this.pickups.length];
-        if (g.kind === 'xp') { g.value += value; return; }
-      }
-      this.xp += value; // field full of non-XP loot: grant it directly
       return;
     }
     this.pickups.push({ kind, x, y, value, pulled: false, vx: 0, vy: 0, age: 0 });

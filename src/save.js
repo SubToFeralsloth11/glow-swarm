@@ -74,7 +74,8 @@ export function sanitizeRun(run) {
 function sanitizeEnemies(list) {
   if (!Array.isArray(list)) return [];
   const out = [];
-  for (const e of list.slice(0, ENEMY_HARD_CAP)) {
+  for (const e of list) {
+    if (out.length === ENEMY_HARD_CAP) break; // cap counts accepted entries, not malformed ones
     if (!Array.isArray(e) || !has(ENEMIES, e[0]) || ENEMIES[e[0]].boss) continue;
     if (![e[1], e[2], e[3]].every(Number.isFinite)) continue;
     out.push([e[0], num(e[1], -3000, 3000, 0), num(e[2], -3000, 3000, 0), num(e[3], 0.01, 1, 1), e[4] ? 1 : 0]);
@@ -86,7 +87,8 @@ function sanitizeEnemies(list) {
 function sanitizePickups(list) {
   if (!Array.isArray(list)) return [];
   const out = [];
-  for (const k of list.slice(0, PICKUP_CAP)) {
+  for (const k of list) {
+    if (out.length === PICKUP_CAP) break;
     if (!Array.isArray(k) || !PICKUP_KINDS.has(k[0])) continue;
     if (![k[1], k[2], k[3]].every(Number.isFinite)) continue;
     // Merged XP gems can grow large; the ceiling only rejects absurd hand-edited values.
